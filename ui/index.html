@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sony Control</title>
+<style>
+  :root {
+    --bg: #05070d; --card: rgba(17,21,33,.78); --card2: #171c2a; --card3: #222839; --line: rgba(255,255,255,.07);
+    --text: #eef2fb; --dim: #8791a8; --faint: #4f5872;
+    --a1: #4fd1ff; --a2: #8b6cff; --grad: linear-gradient(135deg, var(--a1), var(--a2));
+    --glow: color-mix(in srgb, var(--a1) 35%, transparent); --b1: #1d6cff; --b2: #7a3cff; --b3: #00b3d6;
+    --ok: #3ee89a; --warn: #ffb547; --bad: #ff6b81;
+    --ease: cubic-bezier(.3, 1.4, .5, 1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); }
+  body { color: var(--text); font: 14px/1.4 "Segoe UI Variable Text", "Segoe UI", sans-serif;
+         user-select: none; overflow-x: hidden; min-height: 100vh; }
+  /* Slowly drifting color blobs behind everything (GPU-composited transforms only). */
+  .bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .bg i { position: absolute; width: 420px; height: 420px; border-radius: 50%; filter: blur(80px); opacity: .35; will-change: transform; }
+  .bg i:nth-child(1) { background: var(--b1); top: -180px; left: -140px; animation: drift1 22s ease-in-out infinite; }
+  .bg i:nth-child(2) { background: var(--b2); top: 120px; right: -220px; animation: drift2 26s ease-in-out infinite; }
+  .bg i:nth-child(3) { background: var(--b3); bottom: -260px; left: 10%; opacity: .2; animation: drift1 30s ease-in-out infinite reverse; }
+  @keyframes drift1 { 50% { transform: translate(80px, 60px) scale(1.15) } }
+  @keyframes drift2 { 50% { transform: translate(-70px, 90px) scale(.9) } }
+  .wrap { padding: 16px 16px 24px; max-width: 520px; margin: 0 auto; }
+  svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  h2 { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-bottom: 12px; }
+  .card { background: linear-gradient(180deg, rgba(255,255,255,.025), transparent), var(--card); border: 1px solid var(--line);
+          border-radius: 20px; padding: 16px; margin-bottom: 12px; transition: opacity .25s; }
+  .off { opacity: .35; pointer-events: none; }
+  [hidden] { display: none !important; }
+
+  /* entrance & press animations */
+  .card, .tabs { animation: rise .5s var(--ease) both; }
+  .wrap > :nth-child(2) { animation-delay: .06s } .page.show .card:nth-child(1) { animation-delay: .1s }
+  .page.show .card:nth-child(2) { animation-delay: .16s } .page.show .card:nth-child(3) { animation-delay: .22s }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.98) } }
+  button, .dev, .chips button { transition: transform .15s var(--ease), background .15s, border-color .15s, color .2s; }
+  button:active, .dev:active { transform: scale(.95); }
+
+  /* hero: headphones model */
+  .stage { position: relative; height: 190px; display: grid; place-items: center; perspective: 700px; margin: -4px 0 6px; }
+  .model { width: 190px; transform-style: preserve-3d; animation: sway 7s ease-in-out infinite, float 4s ease-in-out infinite;
+           filter: drop-shadow(0 18px 22px rgba(0,0,0,.55)); position: relative; z-index: 1; }
+  .model svg { width: 100%; height: auto; stroke: none; display: block; }
+  @keyframes sway { 0%,100% { transform: rotateY(-28deg) rotateX(8deg) } 50% { transform: rotateY(28deg) rotateX(4deg) } }
+  @keyframes float { 0%,100% { translate: 0 0 } 50% { translate: 0 -8px } }
+  @keyframes inward { from { transform: scale(1.5); opacity: 0 } 30% { opacity: .35 } to { transform: scale(.7); opacity: 0 } }
+  @keyframes outward { from { transform: scale(.7); opacity: 0 } 30% { opacity: .35 } to { transform: scale(1.5); opacity: 0 } }
+  .glow { position: absolute; top: 4px; width: 200px; height: 200px; border-radius: 50%; transition: background .6s;
+          background: radial-gradient(color-mix(in srgb, var(--mc) 30%, transparent), transparent 62%); }
+
+  .stage { height: 236px; margin: 0 0 4px; }
+  .model { width: 178px; }
+  .model img { width: 100%; display: block; }
+  /* Photo turntable: frames cross-fade in a front → 3/4 → side → 3/4 → front pendulum, both ways. */
+  /* Photo hero: levitates (translate) while the inner layer tilts in 3D; a masked light band sweeps over it. */
+  /* Sized so the highest levitation point still stays inside the card. */
+  .model.hero { width: 188px; aspect-ratio: 1; margin-top: -8px; animation: levitate 4.6s ease-in-out infinite;
+                filter: brightness(1.1) drop-shadow(0 16px 18px rgba(0,0,0,.5)); transform-style: preserve-3d; }
+  @keyframes levitate { 0%, 100% { translate: 0 2px } 50% { translate: 0 -12px } }
+  .model.hero .tilt { position: relative; width: 100%; height: 100%; animation: tilt3d 11s ease-in-out infinite; }
+  @keyframes tilt3d { 0%, 100% { transform: rotateY(-15deg) rotateX(4deg) rotateZ(-1deg) } 50% { transform: rotateY(15deg) rotateX(2deg) rotateZ(1deg) } }
+  .model.hero img { width: 100%; height: 100%; display: block; }
+  .model.hero .shine { position: absolute; inset: 0; overflow: hidden; -webkit-mask-size: contain; -webkit-mask-position: center; -webkit-mask-repeat: no-repeat; }
+  .model.hero .shine i { position: absolute; top: -10%; left: -50%; width: 38%; height: 120%;
+                         background: linear-gradient(90deg, transparent, rgba(255,255,255,.32), transparent); animation: shine 7.5s ease-in-out infinite; }
+  @keyframes shine { 0%, 55% { transform: skewX(-20deg) translateX(0) } 80%, 100% { transform: skewX(-20deg) translateX(480%) } }
+  .pshadow { position: absolute; bottom: 30px; width: 124px; height: 18px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.7), transparent);
+             animation: pshadow 4.6s ease-in-out infinite; pointer-events: none; }
+  @keyframes pshadow { 0%, 100% { transform: scale(1); opacity: .9 } 50% { transform: scale(.72); opacity: .5 } }
+
+  /* Glowing floor in perspective: disc, rim, orbiting light and mode ripples lie on it */
+  .floor { position: absolute; bottom: -62px; width: 220px; height: 220px; transform: rotateX(76deg); transform-style: preserve-3d; pointer-events: none; }
+  .floor > * { position: absolute; inset: 0; border-radius: 50%; }
+  .floor .disc { background: radial-gradient(closest-side, color-mix(in srgb, var(--mc) 30%, transparent), color-mix(in srgb, var(--mc) 8%, transparent) 70%, transparent); transition: background .6s; }
+  .floor .rim { border: 2px solid color-mix(in srgb, var(--mc) 50%, transparent); box-shadow: 0 0 22px color-mix(in srgb, var(--mc) 45%, transparent), inset 0 0 18px color-mix(in srgb, var(--mc) 30%, transparent); transition: border-color .6s, box-shadow .6s; }
+  .floor .orbit { background: conic-gradient(from 0deg, transparent 0 62%, color-mix(in srgb, var(--mc) 90%, white) 88%, transparent 100%);
+                  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); animation: orbit 7s linear infinite; }
+  @keyframes orbit { to { transform: rotate(1turn) } }
+  .floor .rp { border: 2px solid var(--mc); opacity: 0; }
+  .stage { --mc: var(--faint); }
+  .stage[data-mode=nc] { --mc: var(--a1); }
+  .stage[data-mode=amb] { --mc: var(--ok); }
+  .stage[data-mode=nc] .rp { animation: inward 3.6s linear infinite; }
+  .stage[data-mode=amb] .rp { animation: outward 3.6s linear infinite; }
+  .floor .rp:nth-child(5) { animation-delay: -1.2s } .floor .rp:nth-child(6) { animation-delay: -2.4s }
+  .sheen { animation: sheen 6s ease-in-out infinite; }
+  @keyframes sheen { 0%, 55% { transform: skewX(-18deg) translateX(0) } 85%, 100% { transform: skewX(-18deg) translateX(400px) } }
+  .led { animation: led 2.4s ease-in-out infinite; }
+  @keyframes led { 50% { opacity: .25 } }
+  .btn { flex: 1; border: 1px solid var(--line); background: var(--card2); color: var(--text); padding: 11px; border-radius: 14px; font: inherit; font-weight: 600;
+         cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn:hover { background: var(--card3); }
+  .btns { display: flex; gap: 8px; }
+
+  /* header */
+  .head { display: flex; align-items: center; gap: 14px; }
+  .name { font-size: 18px; font-weight: 650; }
+  .status { color: var(--dim); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+  .dot.on { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+  .batt { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .batt b { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .cell { width: 30px; height: 15px; border: 2px solid var(--dim); border-radius: 4px; padding: 1px; position: relative; }
+  .cell::after { content: ""; position: absolute; right: -5px; top: 3px; width: 3px; height: 5px; background: var(--dim); border-radius: 0 2px 2px 0; }
+  .cell i { display: block; height: 100%; border-radius: 1px; background: var(--ok); transition: width .4s; }
+
+  /* player */
+  .player { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .track { display: flex; align-items: center; gap: 12px; }
+  .art { width: 40px; height: 40px; border-radius: 10px; background: var(--card3); display: grid; place-items: center; color: var(--a1); }
+  .eqanim { display: flex; gap: 2px; align-items: flex-end; height: 16px; }
+  .eqanim i { width: 3px; background: var(--a1); border-radius: 1px; animation: bounce 1s infinite ease-in-out; }
+  .eqanim i:nth-child(2) { animation-delay: -.3s } .eqanim i:nth-child(3) { animation-delay: -.6s }
+  .paused .eqanim i { animation: none; height: 4px !important; }
+  @keyframes bounce { 0%,100% { height: 4px } 50% { height: 16px } }
+  .tinfo { min-width: 0; flex: 1; }
+  .tinfo .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tinfo .a { color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ctrls { display: flex; gap: 4px; }
+  .ib { width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: var(--text); display: grid; place-items: center; cursor: pointer; transition: .15s; }
+  .ib:hover { background: var(--card3); }
+  .ib.main { background: var(--grad); color: #fff; }
+  .ib.main:hover { filter: brightness(1.1); }
+  .vol { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: var(--dim); }
+  .vol .val { color: var(--text); }
+
+  /* tabs */
+  /* Floating glass dock at the bottom, like a phone tab bar. */
+  .wrap { padding-bottom: 96px; }
+  .tabs { position: fixed; z-index: 10; bottom: 12px; left: 50%; translate: -50% 0; width: min(340px, calc(100% - 32px));
+          display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 6px; border-radius: 24px;
+          background: rgba(14,18,30,.62); border: 1px solid rgba(255,255,255,.09); backdrop-filter: blur(18px) saturate(1.4);
+          box-shadow: 0 18px 40px -12px rgba(0,0,0,.7); }
+  .tabs button { border: 0; background: transparent; color: var(--dim); padding: 7px 2px 6px; border-radius: 18px; font: inherit; font-size: 11px; font-weight: 600;
+                 cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; position: relative; z-index: 1; transition: color .2s; }
+  .tabs button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabs button.sel { color: #fff; }
+  .tabs button.sel svg { animation: pop .45s var(--ease); }
+  @keyframes pop { 40% { transform: scale(1.25) translateY(-2px) } }
+  .tabs svg { width: 20px; height: 20px; }
+  .tabs .pill { top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / 3); border-radius: 18px; }
+
+  /* Compact NC dial: three round buttons, mode name on the left */
+  .ncrow { display: flex; align-items: center; gap: 12px; }
+  .nctx { flex: 1; min-width: 0; }
+  .nctx b { display: block; font-size: 17px; font-weight: 650; }
+  .nctx small { color: var(--dim); font-size: 12px; }
+  .seg.dial { grid-auto-columns: 46px; border-radius: 999px; padding: 5px; flex: none; }
+  .seg.dial button { width: 46px; height: 46px; padding: 0; border-radius: 50%; justify-content: center; }
+  .seg.dial button svg { width: 21px; height: 21px; transition: transform .35s var(--ease); }
+  .seg.dial button.sel svg { transform: scale(1.12); }
+  .seg.dial .pill { top: 5px; bottom: 5px; left: 5px; width: 46px; border-radius: 50%; }
+
+  /* Profiles */
+  .profiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .prof { position: relative; border: 1px solid var(--line); background: var(--card2); color: var(--text); border-radius: 16px; padding: 12px 6px 10px;
+          font: inherit; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .prof svg { width: 22px; height: 22px; color: var(--a1); }
+  .prof.sel { border-color: transparent; background: var(--grad); color: #fff; }
+  .prof.sel svg { color: #fff; }
+  .h2row { display: flex; align-items: baseline; justify-content: space-between; }
+  .link { border: 0; background: none; color: var(--a1); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0 0 12px; }
+  .link:hover { text-decoration: underline; }
+  .profiles.saving .prof { border-style: dashed; border-color: var(--a1); animation: wiggle 1.2s ease-in-out infinite; }
+  @keyframes wiggle { 50% { transform: translateY(-2px) } }
+
+  /* Theme swatches */
+  .swatches { display: flex; gap: 10px; }
+  .sw { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; outline: 2px solid transparent; outline-offset: 2px; }
+  .sw.sel { outline-color: #fff; }
+  /* Selection pill: equal-width columns, so position = index * own width. */
+  .pill { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n, 3)); border-radius: 12px; background: var(--grad);
+          transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .4s var(--ease), opacity .2s;
+          box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--a1) 80%, transparent); }
+  .page { display: none; animation: fade .25s ease; }
+  .page.show { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px) } }
+
+  /* segmented */
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--card2); border-radius: 14px; padding: 4px; position: relative; }
+  .seg button { border: 0; background: transparent; color: var(--dim); padding: 11px 4px; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer;
+                display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; z-index: 1; transition: color .2s; }
+  .seg.small button { padding: 8px 4px; flex-direction: row; justify-content: center; font-size: 13px; }
+  .seg button:hover { color: var(--text); }
+  .seg button.sel { color: #fff; }
+  .seg .pill { top: 4px; bottom: 4px; border-radius: 10px; }
+
+  /* rows & toggles */
+  .row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .ic { width: 36px; height: 36px; border-radius: 11px; background: var(--card2); display: grid; place-items: center; color: var(--a1); flex: none; }
+  .row .tx { flex: 1; min-width: 0; }
+  .row .tx b { display: block; font-weight: 600; }
+  .row .tx small { color: var(--dim); font-size: 12px; }
+  .sub { margin-top: 14px; }
+  .sub .lbl { display: flex; justify-content: space-between; color: var(--dim); margin-bottom: 10px; }
+  .sub .lbl span:last-child { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  .tg { position: relative; width: 50px; height: 30px; flex: none; cursor: pointer; }
+  .tg input { position: absolute; opacity: 0; }
+  .tg i { position: absolute; inset: 0; border-radius: 15px; background: var(--card3); transition: background .25s; }
+  .tg i::after { content: ""; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #c9cdd8;
+                 box-shadow: 0 2px 6px rgba(0,0,0,.4); transition: transform .35s var(--ease), background .25s, width .2s; }
+  .tg:active i::after { width: 30px; }
+  .tg input:checked + i { background: var(--grad); }
+  .tg input:checked + i::after { transform: translateX(20px); background: #fff; }
+  .tg:active input:checked + i::after { transform: translateX(14px); }
+
+  /* sliders */
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; outline: none; cursor: pointer;
+                      background: linear-gradient(90deg, var(--a1), var(--a2)) 0 / var(--p, 0%) 100% no-repeat, var(--card3); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff;
+                      box-shadow: 0 0 0 4px color-mix(in srgb, var(--a1) 25%, transparent), 0 2px 6px rgba(0,0,0,.4); transition: box-shadow .15s; }
+  input[type=range]:active::-webkit-slider-thumb { box-shadow: 0 0 0 8px color-mix(in srgb, var(--a1) 25%, transparent), 0 2px 6px rgba(0,0,0,.4); }
+
+  /* EQ */
+  .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .chips button { border: 1px solid var(--line); background: var(--card2); color: var(--text); padding: 7px 14px; border-radius: 999px; font: inherit; cursor: pointer; transition: .15s; }
+  .chips button:hover { border-color: var(--faint); }
+  .chips button.sel { border-color: transparent; background: var(--grad); color: #fff; }
+  .eq { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; margin-top: 16px; height: 170px; }
+  .band { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .band .v { font-size: 11px; color: var(--text); font-variant-numeric: tabular-nums; height: 14px; }
+  .band .f { font-size: 10px; color: var(--dim); }
+  .band input { writing-mode: vertical-lr; direction: rtl; width: 6px; height: 120px; flex: 1;
+                background: linear-gradient(0deg, var(--a1), var(--a2)) 0 100% / 100% var(--p, 0%) no-repeat, var(--card3); }
+  .band input::-webkit-slider-thumb { width: 16px; height: 16px; }
+
+  /* devices */
+  .devs { display: flex; flex-direction: column; gap: 6px; }
+  .dev { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 14px; background: var(--card2); border: 1px solid transparent; cursor: pointer; transition: .15s; }
+  .dev:hover { border-color: var(--line); background: var(--card3); }
+  .dev.sel { border-color: var(--a1); background: color-mix(in srgb, var(--a1) 8%, transparent); }
+  .dev.dis { cursor: default; opacity: .5; }
+  .dev .ic { color: var(--dim); display: grid; }
+  .dev.sel .ic { color: var(--a1); }
+  .dev .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--card3); color: var(--dim); white-space: nowrap; }
+  .badge.live { background: rgba(79,209,139,.15); color: var(--ok); }
+  .hint { color: var(--dim); font-size: 12px; margin-top: 10px; }
+  .hint.warn { color: var(--warn); }
+
+  select { background: var(--card2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; font: inherit; outline: none; cursor: pointer; }
+  .danger { width: 100%; margin-top: 4px; border: 1px solid rgba(255,107,107,.35); background: rgba(255,107,107,.08); color: var(--bad);
+            padding: 12px; border-radius: 14px; font: inherit; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: .15s; }
+  .danger:hover { background: rgba(255,107,107,.16); }
+</style>
+</head>
+<body>
+<svg style="display:none">
+  <symbol id="i-hp" viewBox="0 0 24 24"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 15a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2zM3 15a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2z"/></symbol>
+  <symbol id="i-nc" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M5.6 5.6l12.8 12.8"/></symbol>
+  <symbol id="i-amb" viewBox="0 0 24 24"><path d="M2 12h2M6 8v8M10 5v14M14 8v8M18 10v4M22 12h0"/></symbol>
+  <symbol id="i-off" viewBox="0 0 24 24"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-dev" viewBox="0 0 24 24"><rect x="2" y="4" width="14" height="10" rx="2"/><path d="M6 18h6"/><rect x="18" y="8" width="4" height="12" rx="1"/></symbol>
+  <symbol id="i-set" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M19 20 9 12l10-8v16zM5 19V5"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="m5 4 10 8-10 8V4zM19 5v14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m6 3 14 9-14 9V3z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 4h3v16H7zM14 4h3v16h-3z" fill="currentColor"/></symbol>
+  <symbol id="i-vol" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
+  <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-spk" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="14" r="4"/><path d="M12 6h0"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8 21h8"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8L4 10l6.1 1.2L12 17l1.9-5.8L20 10l-6.1-1.2z"/><path d="M5 3v4M3 5h4M19 17v4M17 19h4"/></symbol>
+  <symbol id="i-touch" viewBox="0 0 24 24"><path d="M9 11V6a3 3 0 0 1 6 0v5"/><path d="M12 11V6M5 14l7 7 7-7-3-3H8z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+  <symbol id="i-ear" viewBox="0 0 24 24"><path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/><path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0M12 20h0"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+  <symbol id="i-game" viewBox="0 0 24 24"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6l-.6 5.6A3 3 0 0 0 5 17.5c1 0 1.9-.5 2.5-1.3L9 14h6l1.5 2.2a3 3 0 0 0 2.5 1.3 3 3 0 0 0 3-3.3l-.6-5.6A4 4 0 0 0 17.3 5z"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-call" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></symbol>
+  <symbol id="i-auto"viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4M4.9 19.1l2.9-2.9M16.2 7.8l2.9-2.9"/></symbol>
+</svg>
+
+<div class="bg"><i></i><i></i><i></i></div>
+<div class="wrap">
+  <div class="card">
+    <div class="stage" id="stage">
+      <div class="glow"></div>
+      <div class="floor"><i class="disc"></i><i class="rim"></i><i class="orbit"></i><i class="rp"></i><i class="rp"></i><i class="rp"></i></div>
+      <div class="pshadow"></div>
+      <div class="model">
+        <!-- Own stylized over-ear headphones (not Sony's artwork) -->
+        <svg viewBox="0 0 240 230" id="hpsvg">
+          <defs>
+            <linearGradient id="g-band" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a6175"/><stop offset=".5" stop-color="#2c313f"/><stop offset="1" stop-color="#1a1d26"/></linearGradient>
+            <linearGradient id="g-metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3b4254"/><stop offset=".45" stop-color="#b9c2d6"/><stop offset="1" stop-color="#4a5266"/></linearGradient>
+            <linearGradient id="g-cup" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5c6478"/><stop offset=".45" stop-color="#2a2f3d"/><stop offset="1" stop-color="#12151c"/></linearGradient>
+            <linearGradient id="g-face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d4456"/><stop offset="1" stop-color="#1b1f29"/></linearGradient>
+            <radialGradient id="g-pad" cx=".45" cy=".3"><stop offset="0" stop-color="#3a4050"/><stop offset="1" stop-color="#0d0f14"/></radialGradient>
+            <linearGradient id="g-sheen" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+            <radialGradient id="g-led"><stop offset="0" stop-color="#bff4ff"/><stop offset=".4" stop-color="#4fd1ff"/><stop offset="1" stop-color="#4fd1ff" stop-opacity="0"/></radialGradient>
+            <mask id="m-hp">
+              <path d="M54 124 C48 48 90 18 120 18 C150 18 192 48 186 124" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+              <ellipse cx="50" cy="164" rx="34" ry="48" fill="#fff"/><ellipse cx="190" cy="164" rx="34" ry="48" fill="#fff"/>
+            </mask>
+          </defs>
+          <!-- headband -->
+          <path d="M54 124 C48 48 90 18 120 18 C150 18 192 48 186 124" fill="none" stroke="url(#g-band)" stroke-width="12" stroke-linecap="round"/>
+          <path d="M66 106 C66 58 96 36 120 36 C144 36 174 58 174 106" fill="none" stroke="#0c0e13" stroke-width="9" stroke-linecap="round"/>
+          <path d="M66 106 C66 58 96 36 120 36 C144 36 174 58 174 106" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="1" stroke-dasharray="2 4"/>
+          <path d="M80 44 C98 28 142 28 160 44" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- metal sliders -->
+          <rect x="48" y="108" width="10" height="36" rx="5" fill="url(#g-metal)"/>
+          <rect x="182" y="108" width="10" height="36" rx="5" fill="url(#g-metal)"/>
+          <!-- left cup -->
+          <ellipse cx="50" cy="164" rx="34" ry="48" fill="url(#g-cup)"/>
+          <ellipse cx="45" cy="164" rx="25" ry="39" fill="url(#g-face)"/>
+          <ellipse cx="45" cy="164" rx="25" ry="39" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="1"/>
+          <ellipse cx="66" cy="164" rx="16" ry="40" fill="url(#g-pad)"/>
+          <!-- right cup -->
+          <ellipse cx="190" cy="164" rx="34" ry="48" fill="url(#g-cup)"/>
+          <ellipse cx="195" cy="164" rx="25" ry="39" fill="url(#g-face)"/>
+          <ellipse cx="195" cy="164" rx="25" ry="39" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+          <ellipse cx="174" cy="164" rx="16" ry="40" fill="url(#g-pad)"/>
+          <!-- rim highlights -->
+          <path d="M22 138 C17 156 17 174 24 192" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M218 138 C223 156 223 174 216 192" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="2" stroke-linecap="round"/>
+          <!-- status LED -->
+          <circle class="led" cx="34" cy="200" r="6" fill="url(#g-led)"/>
+          <!-- moving light sheen, clipped to the headphones -->
+          <g mask="url(#m-hp)"><rect class="sheen" x="-60" y="0" width="60" height="230" fill="url(#g-sheen)" transform="skewX(-18)"/></g>
+        </svg>
+      </div>
+    </div>
+    <div class="head">
+      <div>
+        <div class="name" id="name">Headphones</div>
+        <div class="status"><span class="dot" id="dot"></span><span id="status">…</span></div>
+      </div>
+      <div class="batt" id="batt" hidden><b id="pct">–</b><div class="cell"><i id="cellfill"></i></div></div>
+    </div>
+    <div class="player hp" id="player" hidden>
+      <div class="track">
+        <div class="art"><div class="eqanim"><i></i><i></i><i></i></div></div>
+        <div class="tinfo"><div class="t" id="title">—</div><div class="a" id="artist"></div></div>
+        <div class="ctrls">
+          <button class="ib" data-play="3" data-i18n-title="prev"><svg><use href="#i-prev"/></svg></button>
+          <button class="ib main" id="pp" data-i18n-title="playpause"><svg><use href="#i-play"/></svg></button>
+          <button class="ib" data-play="2" data-i18n-title="next"><svg><use href="#i-next"/></svg></button>
+        </div>
+      </div>
+      <div class="vol" id="volrow" hidden><svg><use href="#i-vol"/></svg><input type="range" id="vol" min="0" max="30"><span class="val" id="volv">0</span></div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="pill"></div>
+    <button data-tab="sound" class="sel"><svg><use href="#i-sound"/></svg><span data-i18n="tab_sound"></span></button>
+    <button data-tab="devices"><svg><use href="#i-dev"/></svg><span data-i18n="tab_devices"></span></button>
+    <button data-tab="settings"><svg><use href="#i-set"/></svg><span data-i18n="tab_settings"></span></button>
+  </div>
+
+  <!-- SOUND -->
+  <div class="page show" id="p-sound">
+    <div class="card hp">
+      <div class="h2row"><h2 data-i18n="profiles"></h2><button class="link" id="profsave" data-i18n="save_current"></button></div>
+      <div class="profiles" id="profiles"></div>
+      <div class="hint" id="profhint" hidden data-i18n="prof_hint"></div>
+    </div>
+
+    <div class="card hp">
+      <h2 data-i18n="nc_title"></h2>
+      <div class="ncrow">
+        <div class="nctx"><b id="ncname">—</b><small id="ncdesc"></small></div>
+        <div class="seg dial" id="nc">
+          <div class="pill"></div>
+          <button data-m="nc" data-i18n-title="mode_nc"><svg><use href="#i-nc"/></svg></button>
+          <button data-m="amb" data-i18n-title="mode_amb"><svg><use href="#i-amb"/></svg></button>
+          <button data-m="off" data-i18n-title="mode_off"><svg><use href="#i-off"/></svg></button>
+        </div>
+      </div>
+      <div id="ambbox" hidden>
+        <div class="sub">
+          <div class="lbl"><span data-i18n="amb_level"></span><span id="lvlv">0</span></div>
+          <input type="range" id="lvl" min="0" max="20">
+        </div>
+        <div class="row" style="margin-top:6px">
+          <div class="ic"><svg><use href="#i-chat"/></svg></div>
+          <div class="tx"><b data-i18n="voice"></b><small data-i18n="voice_sub"></small></div>
+          <label class="tg"><input type="checkbox" id="voice"><i></i></label>
+        </div>
+      </div>
+      <div id="autobox" hidden>
+        <div class="row">
+          <div class="ic"><svg><use href="#i-auto"/></svg></div>
+          <div class="tx"><b data-i18n="auto_amb"></b><small data-i18n="auto_amb_sub"></small></div>
+          <label class="tg"><input type="checkbox" id="autoasm"><i></i></label>
+        </div>
+        <div class="seg small" id="sens" hidden>
+          <div class="pill"></div>
+          <button data-s="2" data-i18n="sens_low"></button><button data-s="0" data-i18n="sens_std"></button><button data-s="1" data-i18n="sens_high"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card hp">
+      <h2 data-i18n="eq"></h2>
+      <div class="chips" id="presets"></div>
+      <div class="eq" id="bands"></div>
+    </div>
+  </div>
+
+  <!-- DEVICES -->
+  <div class="page" id="p-devices">
+    <div class="card hp" id="peerscard" hidden>
+      <h2 data-i18n="peers_title"></h2>
+      <div class="devs" id="peers"></div>
+      <div class="hint" data-i18n="peers_hint"></div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="out_title"></h2>
+      <div class="devs" id="outs"></div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="mic_title"></h2>
+      <div class="devs" id="ins"></div>
+      <div class="hint" id="michint"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="p-settings">
+    <div class="card hp">
+      <h2 data-i18n="smart"></h2>
+      <div id="smart"></div>
+    </div>
+    <div class="card hp">
+      <h2 data-i18n="audio_conn"></h2>
+      <div id="audioset"></div>
+      <div class="sub" id="connbox" hidden>
+        <div class="lbl"><span data-i18n="bt_priority"></span><span></span></div>
+        <div class="seg small" id="conn">
+          <div class="pill"></div>
+          <button data-c="0" data-i18n="conn_quality"></button><button data-c="1" data-i18n="conn_stable"></button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="app"></h2>
+      <div class="row">
+        <div class="ic"><svg><use href="#i-globe"/></svg></div>
+        <div class="tx"><b data-i18n="language"></b></div>
+        <select id="lang"></select>
+      </div>
+      <div class="row">
+        <div class="ic"><svg><use href="#i-auto"/></svg></div>
+        <div class="tx"><b data-i18n="autostart"></b><small data-i18n="autostart_sub"></small></div>
+        <label class="tg"><input type="checkbox" id="autostart"><i></i></label>
+      </div>
+      <div class="sub">
+        <div class="lbl"><span data-i18n="theme"></span><span></span></div>
+        <div class="swatches" id="themes"></div>
+      </div>
+    </div>
+    <div class="card hp">
+      <h2 data-i18n="power"></h2>
+      <div class="row" id="aorow" hidden>
+        <div class="ic"><svg><use href="#i-moon"/></svg></div>
+        <div class="tx"><b data-i18n="auto_off"></b><small data-i18n="auto_off_sub"></small></div>
+        <select id="autooff">
+          <option value="16" data-i18n="ao_removed"></option><option value="0" data-i18n="ao_5"></option><option value="4" data-i18n="ao_15"></option>
+          <option value="1" data-i18n="ao_30"></option><option value="2" data-i18n="ao_60"></option><option value="3" data-i18n="ao_180"></option><option value="17" data-i18n="ao_never"></option>
+        </select>
+      </div>
+      <button class="danger" id="poweroff"><svg><use href="#i-off"/></svg><span id="powerlabel" data-i18n="power_off"></span></button>
+    </div>
+  </div>
+</div>
+
+<script src="i18n.js"></script>
+<script>
+const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
+const $ = id => document.getElementById(id);
+const PRESETS = [[0x00, "preset_off"], [0x30, "Heavy"], [0x31, "Clear"], [0x32, "Hard"], [0x33, "Soft"], [0xA0, "preset_custom"]];
+const LABELS6 = ["Bass", "400", "1k", "2.5k", "6.3k", "16k"];
+const LABELS10 = ["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"];
+const GS = {
+  TOUCH_PANEL_SETTING: ["i-touch", "gs_touch", "gs_touch_sub"],
+  MULTIPOINT_SETTING: ["i-link", "gs_multi", "gs_multi_sub"],
+  SIDETONE_SETTING: ["i-ear", "gs_side", "gs_side_sub"],
+};
+let hp = {}, pcName = "", audioNow = { outputs: [], inputs: [] };
+const NC_TEXT = {
+  nc: ["mode_nc", "mode_nc_d"], amb: ["mode_amb", "mode_amb_d"],
+  off: ["mode_off", "mode_off_d"], none: ["—", "mode_none_d"],
+};
+
+// ---------- profiles ----------
+// A profile = NC mode + EQ + (optionally) the PC output and mic. Defaults until the user saves their own.
+const PROFILES = [
+  { id: "game", icon: "i-game", name: "prof_game", def: { nc: "nc", level: 10, voice: false, eq: 0x00, bands: [] } },
+  { id: "music", icon: "i-music", name: "prof_music", def: { nc: "nc", level: 10, voice: false, eq: 0x30, bands: [] } },
+  { id: "call", icon: "i-call", name: "prof_call", def: { nc: "amb", level: 14, voice: true, eq: 0x31, bands: [] } },
+];
+const profile = p => { try { return JSON.parse(load("prof-" + p.id)) || p.def; } catch { return p.def; } };
+let activeProfile = load("prof-active");
+
+function renderProfiles() {
+  const box = $("profiles");
+  if (box.childElementCount) { // only refresh selection
+    box.querySelectorAll(".prof").forEach(b => b.classList.toggle("sel", b.dataset.id === activeProfile));
+    return;
+  }
+  for (const p of PROFILES) {
+    const b = document.createElement("button");
+    b.className = "prof";
+    b.dataset.id = p.id;
+    b.innerHTML = `<svg><use href="#${p.icon}"/></svg><span>${t(p.name)}</span>`;
+    b.onclick = () => box.classList.contains("saving") ? (saveProfile(p, b), setSaving(false)) : applyProfile(p);
+    box.append(b);
+  }
+  renderProfiles();
+}
+function setSaving(on) {
+  $("profiles").classList.toggle("saving", on);
+  $("profhint").hidden = !on;
+  $("profsave").textContent = t(on ? "cancel" : "save_current");
+}
+$("profsave").onclick = () => setSaving(!$("profiles").classList.contains("saving"));
+function saveProfile(p, btn) {
+  store("prof-" + p.id, JSON.stringify({
+    nc: mode(hp), level: hp.amb_level, voice: hp.voice, eq: hp.eq_preset ?? 0, bands: hp.eq_preset === 0xA0 ? hp.eq_bands : [],
+    out: audioNow.outputs.find(d => d.default)?.id, mic: audioNow.inputs.find(d => d.default)?.id,
+  }));
+  btn.animate([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: 400 });
+  activeProfile = p.id; store("prof-active", p.id); renderProfiles();
+}
+async function applyProfile(p) {
+  const c = profile(p);
+  activeProfile = p.id; store("prof-active", p.id); renderProfiles();
+  await invoke("hp_set_nc", { mode: c.nc, level: c.level, voice: c.voice });
+  await invoke("hp_set_eq", { preset: c.eq, bands: c.bands || [] });
+  for (const id of [c.out, c.mic]) if (id) await invoke("audio_set", { id }).catch(() => {});
+  loadAudio();
+}
+
+// ---------- themes ----------
+const THEMES = {
+  aqua:   { a1: "#4fd1ff", a2: "#8b6cff", b1: "#1d6cff", b2: "#7a3cff", b3: "#00b3d6" },
+  sunset: { a1: "#ffb35c", a2: "#ff4f8b", b1: "#ff6a3d", b2: "#c2185b", b3: "#ff9e2c" },
+  mint:   { a1: "#5effc1", a2: "#2fb4ff", b1: "#00a37a", b2: "#1d6cff", b3: "#00d6a0" },
+  mono:   { a1: "#f2f4fa", a2: "#9aa3b8", b1: "#3a4256", b2: "#262c3c", b3: "#4a5268" },
+};
+function applyTheme(name) {
+  const t = THEMES[name] || THEMES.aqua;
+  for (const [k, v] of Object.entries(t)) document.documentElement.style.setProperty("--" + k, v);
+  document.querySelectorAll(".sw").forEach(s => s.classList.toggle("sel", s.dataset.t === name));
+}
+for (const [name, t] of Object.entries(THEMES)) {
+  const s = document.createElement("button");
+  s.className = "sw";
+  s.dataset.t = name;
+  s.style.background = `linear-gradient(135deg, ${t.a1}, ${t.a2})`;
+  s.onclick = () => { store("theme", name); applyTheme(name); };
+  $("themes").append(s);
+}
+
+// ---------- helpers ----------
+function fill(r) {
+  const p = (r.value - r.min) / (r.max - r.min) * 100;
+  r.style.setProperty("--p", p + "%");
+}
+function select(box, attr, val) {
+  const btns = [...box.querySelectorAll(`button[${attr}]`)];
+  const i = btns.findIndex(b => b.getAttribute(attr) === String(val));
+  btns.forEach((b, j) => b.classList.toggle("sel", j === i));
+  const pill = box.querySelector(".pill");
+  pill.style.setProperty("--n", btns.length);
+  pill.style.setProperty("--i", Math.max(i, 0));
+  pill.style.opacity = i < 0 ? 0 : 1;
+}
+function toggleRow(icon, title, sub, checked, onchange) {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = `<div class="ic"><svg><use href="#${icon}"/></svg></div>
+    <div class="tx"><b></b><small></small></div><label class="tg"><input type="checkbox"><i></i></label>`;
+  row.querySelector("b").textContent = title;
+  row.querySelector("small").textContent = sub;
+  const cb = row.querySelector("input");
+  cb.checked = checked;
+  cb.onchange = () => onchange(cb.checked);
+  return row;
+}
+const set = (what, v) => invoke("hp_set", { what, v });
+
+// ---------- tabs ----------
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  select($("tabs"), "data-tab", b.dataset.tab);
+  document.querySelectorAll(".page").forEach(p => p.classList.toggle("show", p.id === "p-" + b.dataset.tab));
+  if (b.dataset.tab === "devices") loadAudio();
+});
+
+// ---------- headphones ----------
+function mode(s) { return !s.nc_on ? "off" : s.nc_mode === 1 ? "amb" : "nc"; }
+
+function renderHp(s) {
+  hp = s;
+  $("name").textContent = s.name || t("headphones");
+  $("status").textContent = statusText(s.status);
+  $("dot").classList.toggle("on", s.connected);
+  document.querySelectorAll(".hp").forEach(c => c.classList.toggle("off", !s.connected));
+
+  $("batt").hidden = s.battery == null;
+  if (s.battery != null) {
+    $("pct").textContent = s.battery + "%" + (s.charging ? " ⚡" : "");
+    $("cellfill").style.width = s.battery + "%";
+    $("cellfill").style.background = s.battery <= 20 ? "var(--bad)" : s.battery <= 40 ? "var(--warn)" : "var(--ok)";
+  }
+
+  // player
+  $("player").hidden = !s.connected || (!s.title && s.volume == null);
+  $("title").textContent = s.title || t("nothing_playing");
+  $("artist").textContent = s.artist;
+  $("player").classList.toggle("paused", !s.playing);
+  $("pp").querySelector("use").setAttribute("href", s.playing ? "#i-pause" : "#i-play");
+  $("volrow").hidden = s.volume == null;
+  if (s.volume != null && document.activeElement !== $("vol")) { $("vol").value = s.volume; $("volv").textContent = s.volume; fill($("vol")); }
+
+  // NC
+  const m = mode(s);
+  const prevMode = $("stage").dataset.mode;
+  if (s.connected) $("stage").dataset.mode = m; else delete $("stage").dataset.mode;
+  if (prevMode && s.connected && prevMode !== m) {
+    // Mode switched: a soft hop of the headphones and a flash of the floor.
+    document.querySelector(".model").animate([{ scale: 1 }, { scale: 1.07 }, { scale: 1 }], { duration: 650, easing: "cubic-bezier(.3,1.4,.5,1)" });
+    document.querySelector(".floor .rim").animate([{ opacity: 1 }, { opacity: 1, filter: "brightness(2.2)" }, { opacity: 1 }], { duration: 800 });
+  }
+  select($("nc"), "data-m", s.connected ? m : null);
+  const [nn, nd] = NC_TEXT[s.connected ? m : "none"];
+  $("ncname").textContent = t(nn);
+  $("ncdesc").textContent = m === "amb" && s.connected ? t("amb_desc", { n: s.amb_level }) + (s.voice ? " · " + t("voice_short") : "") : t(nd);
+  renderProfiles();
+  $("ambbox").hidden = m !== "amb";
+  if (document.activeElement !== $("lvl")) { $("lvl").value = s.amb_level; $("lvlv").textContent = s.amb_level; fill($("lvl")); }
+  $("voice").checked = s.voice;
+  $("autobox").hidden = s.nc_type !== 0x19 || m === "off";
+  $("autoasm").checked = s.auto_asm;
+  $("sens").hidden = !s.auto_asm;
+  select($("sens"), "data-s", s.sensitivity);
+
+  // EQ
+  $("presets").innerHTML = "";
+  for (const [id, label] of PRESETS) {
+    const b = document.createElement("button");
+    b.textContent = t(label);
+    b.classList.toggle("sel", s.eq_preset === id);
+    b.onclick = () => invoke("hp_set_eq", { preset: id, bands: [] });
+    $("presets").append(b);
+  }
+  if (!document.querySelector("#bands input:active")) renderBands(s);
+
+  // devices (multipoint)
+  $("peerscard").hidden = !s.peers.length;
+  $("peers").innerHTML = "";
+  for (const p of s.peers) {
+    const isPc = pcName && p.name.toLowerCase() === pcName.toLowerCase();
+    const el = document.createElement("div");
+    el.className = "dev" + (p.playing ? " sel" : "") + (p.connected ? "" : " dis");
+    el.innerHTML = `<span class="ic"><svg><use href="#${isPc ? "i-pc" : "i-phone"}"/></svg></span><span class="n"></span>
+      <span class="badge${p.playing ? " live" : ""}">${t(p.playing ? "playing" : p.connected ? "connected" : "not_connected")}</span>`;
+    el.querySelector(".n").textContent = p.name + (isPc ? " " + t("this_pc") : "");
+    if (p.connected && !p.playing) el.onclick = () => invoke("hp_switch", { mac: p.mac });
+    $("peers").append(el);
+  }
+
+  // settings
+  const smart = $("smart");
+  smart.innerHTML = "";
+  if (s.speak_to_chat != null) smart.append(toggleRow("i-chat", "Speak-to-Chat", t("stc_sub"), s.speak_to_chat, v => set("speak_to_chat", +v)));
+  if (s.auto_pause != null) smart.append(toggleRow("i-hand", t("autopause"), t("autopause_sub"), s.auto_pause, v => set("auto_pause", +v)));
+  for (const g of s.general.filter(g => g.name)) {
+    const [icon, title, sub] = GS[g.name] || ["i-set", g.name.replace(/_/g, " ").toLowerCase(), ""];
+    smart.append(toggleRow(icon, t(title), t(sub), g.on, v => set("gs" + g.id, +v)));
+  }
+  const au = $("audioset");
+  au.innerHTML = "";
+  if (s.dsee != null) au.append(toggleRow("i-spark", "DSEE Extreme", t("dsee_sub"), s.dsee, v => set("dsee", +v)));
+  $("connbox").hidden = s.conn_mode == null;
+  select($("conn"), "data-c", s.conn_mode);
+  $("aorow").hidden = !s.auto_off;
+  if (s.auto_off) $("autooff").value = s.auto_off[1];
+}
+
+function renderBands(s) {
+  const box = $("bands");
+  box.innerHTML = "";
+  const labels = s.eq_bands.length === 10 ? LABELS10 : LABELS6;
+  s.eq_bands.forEach((v, i) => {
+    const el = document.createElement("div");
+    el.className = "band";
+    el.innerHTML = `<span class="v"></span><input type="range" min="${-s.eq_range}" max="${s.eq_range}" step="1" value="${v}"><span class="f">${labels[i] ?? i + 1}</span>`;
+    const input = el.querySelector("input"), out = el.querySelector(".v");
+    const show = () => { out.textContent = input.value > 0 ? "+" + input.value : input.value; fill(input); };
+    show();
+    input.oninput = show;
+    input.onchange = () => invoke("hp_set_eq", { preset: 0xA0, bands: [...box.querySelectorAll("input")].map(x => +x.value) });
+    box.append(el);
+  });
+}
+
+// controls
+const sendNc = m => invoke("hp_set_nc", { mode: m, level: +$("lvl").value, voice: $("voice").checked });
+document.querySelectorAll("#nc button").forEach(b => b.onclick = () => { select($("nc"), "data-m", b.dataset.m); sendNc(b.dataset.m); });
+$("lvl").oninput = () => { $("lvlv").textContent = $("lvl").value; fill($("lvl")); };
+$("lvl").onchange = () => sendNc("amb");
+$("voice").onchange = () => sendNc("amb");
+$("autoasm").onchange = () => invoke("hp_auto_asm", { on: $("autoasm").checked, sensitivity: hp.sensitivity || 0 });
+document.querySelectorAll("#sens button").forEach(b => b.onclick = () => {
+  select($("sens"), "data-s", b.dataset.s);
+  invoke("hp_auto_asm", { on: true, sensitivity: +b.dataset.s });
+});
+document.querySelectorAll("#conn button").forEach(b => b.onclick = () => { select($("conn"), "data-c", b.dataset.c); set("conn_mode", +b.dataset.c); });
+$("autooff").onchange = () => set("auto_off", +$("autooff").value);
+// Two-step confirm inside the button (no browser dialog).
+let powerArmed = 0;
+$("poweroff").onclick = () => {
+  const label = $("powerlabel");
+  if (Date.now() - powerArmed < 3000) { powerArmed = 0; label.textContent = t("power_off"); set("power_off", 1); return; }
+  powerArmed = Date.now();
+  label.textContent = t("power_off_confirm");
+  setTimeout(() => { if (powerArmed && Date.now() - powerArmed >= 3000) label.textContent = t("power_off"); }, 3100);
+};
+$("pp").onclick = () => set("play", hp.playing ? 0x01 : 0x07);
+document.querySelectorAll("[data-play]").forEach(b => b.onclick = () => set("play", +b.dataset.play));
+$("vol").oninput = () => { $("volv").textContent = $("vol").value; fill($("vol")); };
+$("vol").onchange = () => set("volume", +$("vol").value);
+
+// ---------- PC audio ----------
+function renderDevs(box, list, isMic) {
+  box.innerHTML = "";
+  for (const d of list) {
+    const el = document.createElement("div");
+    el.className = "dev" + (d.default ? " sel" : "");
+    const icon = isMic ? "i-mic" : /WH-|WF-|науш|headphone|гарнитур|kopfh|écout|auricul|fone|słuchaw|ヘッドホン|耳机/i.test(d.name) ? "i-hp" : /ULT|колон|speaker|динам/i.test(d.name) ? "i-spk" : "i-vol";
+    el.innerHTML = `<span class="ic"><svg><use href="#${icon}"/></svg></span><span class="n"></span>${d.default ? `<span class="badge live">${t("active")}</span>` : ""}`;
+    el.querySelector(".n").textContent = d.name;
+    el.title = d.name;
+    el.onclick = async () => { await invoke("audio_set", { id: d.id }); loadAudio(); };
+    box.append(el);
+  }
+}
+async function loadAudio() {
+  const d = audioNow = await invoke("audio_list");
+  renderDevs($("outs"), d.outputs, false);
+  renderDevs($("ins"), d.inputs, true);
+  const mic = d.inputs.find(x => x.default);
+  const bad = mic && /hands-free|гарнитур|headset/i.test(mic.name);
+  $("michint").className = "hint" + (bad ? " warn" : "");
+  $("michint").textContent = bad ? t("mic_warn") : "";
+}
+
+function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
+function load(k) { try { return localStorage.getItem(k); } catch { return null; } }
+// Headphones photo, if the user has one in the app data folder (never shipped in the repo);
+// otherwise the drawn SVG model. One image, no frame swapping: levitation + 3D tilt + light sweep.
+async function applyPhoto() {
+  const frames = await invoke("photo_frames").catch(() => []);
+  const url = frames[1] || frames[0], model = document.querySelector(".model");
+  model.querySelector(".tilt")?.remove();
+  model.classList.toggle("hero", !!url);
+  $("hpsvg").style.display = url ? "none" : "";
+  if (url) {
+    const t = document.createElement("div");
+    t.className = "tilt";
+    t.innerHTML = `<img alt=""><div class="shine"><i></i></div>`;
+    t.querySelector("img").src = url;
+    t.querySelector(".shine").style.webkitMaskImage = `url("${url}")`;
+    model.append(t);
+  }
+}
+applyPhoto();
+
+// Stop all animations while the window is hidden in the tray (zero CPU/GPU).
+document.addEventListener("visibilitychange", () => {
+  // Only endless loops; one-shot entrance animations must always finish or content stays invisible.
+  document.getAnimations()
+    .filter(a => a.effect?.getTiming().iterations === Infinity)
+    .forEach(a => document.hidden ? a.pause() : a.play());
+});
+
+// ---------- language ----------
+/** Rust sends status as "code" or "code:detail" (e.g. "connect_failed:10060"). */
+function statusText(s) {
+  const [k, code] = (s || "searching").split(":");
+  return t("st_" + k, { code });
+}
+function applyLang(code) {
+  LANG = code in LANGS ? code : "en";
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n));
+  document.querySelectorAll("[data-i18n-title]").forEach(el => el.title = t(el.dataset.i18nTitle));
+  $("lang").value = LANG;
+  $("profiles").innerHTML = ""; // rebuilt with the new names on the next render
+  setSaving(false);
+  if (hp.status !== undefined) renderHp(hp);
+  loadAudio();
+}
+for (const [code, [name]] of Object.entries(LANGS)) $("lang").append(new Option(name, code));
+$("lang").onchange = () => { applyLang($("lang").value); invoke("lang_set", { code: LANG }); };
+
+// ---------- start ----------
+applyTheme(load("theme") || "aqua");
+invoke("autostart_get").then(on => $("autostart").checked = on);
+$("autostart").onchange = () => invoke("autostart_set", { on: $("autostart").checked });
+invoke("pc_name").then(n => pcName = n);
+applyLang(pickLang(navigator.language)); // until the saved choice arrives
+invoke("lang_get").then(c => c && applyLang(c));
+listen("hp", e => renderHp(e.payload));
+invoke("hp_state").then(s => { renderHp(s); select($("tabs"), "data-tab", "sound"); });
+loadAudio();
+window.addEventListener("focus", loadAudio);
+setInterval(loadAudio, 5000);
+</script>
+</body>
+</html>

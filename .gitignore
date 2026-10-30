@@ -1,0 +1,7 @@
+/target
+/app
+/gen/schemas
+# Headphone photos live in the user's app data folder, never in the repo.
+*.jpg
+*.jpeg
+*.webp
