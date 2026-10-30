@@ -19,10 +19,10 @@
 ## Screenshots
 
 <p align="center">
-  <img src="docs/sound.png" width="24%" alt="Sound tab">
-  <img src="docs/ambient.png" width="24%" alt="Ambient sound">
-  <img src="docs/devices.png" width="24%" alt="Devices tab">
-  <img src="docs/settings.png" width="24%" alt="Settings tab">
+  <img src="docs/sound.png" width="24%" align="top" alt="Sound tab">
+  <img src="docs/ambient.png" width="24%" align="top" alt="Ambient sound">
+  <img src="docs/devices.png" width="24%" align="top" alt="Devices tab">
+  <img src="docs/settings.png" width="24%" align="top" alt="Settings tab">
 </p>
 
 ## Features
@@ -77,7 +77,7 @@ The app is `target/release/sony-control.exe`. Run the tests with `cargo test`.
 ## Credits
 
 The headphone protocol (MDR) is ported to Rust from [mos9527/SonyHeadphonesClient](https://github.com/mos9527/SonyHeadphonesClient) (MIT),
-a continuation of [Plutoberth/SonyHeadphonesClient](https://github.com/Plutoberth/SonyHeadphonesClient). See [LICENSE](LICENSE).
+a continuation of [Plutoberth/SonyHeadphonesClient](https://github.com/Plutoberth/SonyHeadphonesClient). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Disclaimer
 
