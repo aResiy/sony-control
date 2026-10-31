@@ -56,6 +56,8 @@ The app follows your Windows language and can be switched in **Settings → App 
 2. Download `SonyControl.exe` from the [latest release](https://github.com/aResiy/sony-control/releases/latest) and run it. No installer needed.
 3. The app finds the headphones by itself.
 
+**Your own headphones picture (optional):** create a `photo` folder next to `SonyControl.exe` and put a transparent PNG named `headphones-1.png` in it — the app shows it instead of the drawn model.
+
 > Windows SmartScreen may warn about an unknown publisher because the app isn't code-signed. Click **More info → Run anyway**, or build it yourself from source.
 
 ## FAQ

@@ -103,14 +103,17 @@ fn autostart_set(on: bool) -> bool {
     winreg::set(RUN_KEY, RUN_NAME, &format!("\"{exe}\" --tray"))
 }
 
-/// The user's headphones photo from the app data folder (never in the repo), as a data URL:
-/// headphones-1.png (three-quarter view), else headphones-0.png. Async = read off the UI thread.
+/// The user's headphones photo (never in the repo), as a data URL. Looked up in a `photo`
+/// folder next to the exe first (portable, survives with the app), then in the app data folder.
+/// headphones-1.png (three-quarter view) is preferred, else headphones-0.png. Async = off the UI thread.
 #[tauri::command]
 async fn photo(app: AppHandle) -> Option<String> {
-    let dir = app.path().app_data_dir().ok()?;
-    ["headphones-1.png", "headphones-0.png"]
-        .iter()
-        .find_map(|f| std::fs::read(dir.join(f)).ok())
+    let exe_dir = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("photo")));
+    let dirs = [exe_dir, app.path().app_data_dir().ok()];
+    dirs.iter()
+        .flatten()
+        .flat_map(|d| ["headphones-1.png", "headphones-0.png"].map(|f| d.join(f)))
+        .find_map(|p| std::fs::read(p).ok())
         .map(|b| format!("data:image/png;base64,{}", base64(&b)))
 }
 
