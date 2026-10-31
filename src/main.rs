@@ -103,15 +103,15 @@ fn autostart_set(on: bool) -> bool {
     winreg::set(RUN_KEY, RUN_NAME, &format!("\"{exe}\" --tray"))
 }
 
-/// Headphone photo frames saved for this user in the app data folder (never in the repo):
-/// headphones-0.png (front), -1 (three-quarter), -2 (side), as data URLs.
+/// The user's headphones photo from the app data folder (never in the repo), as a data URL:
+/// headphones-1.png (three-quarter view), else headphones-0.png. Async = read off the UI thread.
 #[tauri::command]
-fn photo_frames(app: AppHandle) -> Vec<String> {
-    let Ok(dir) = app.path().app_data_dir() else { return vec![] };
-    (0..)
-        .map_while(|i| std::fs::read(dir.join(format!("headphones-{i}.png"))).ok())
+async fn photo(app: AppHandle) -> Option<String> {
+    let dir = app.path().app_data_dir().ok()?;
+    ["headphones-1.png", "headphones-0.png"]
+        .iter()
+        .find_map(|f| std::fs::read(dir.join(f)).ok())
         .map(|b| format!("data:image/png;base64,{}", base64(&b)))
-        .collect()
 }
 
 fn base64(b: &[u8]) -> String {
@@ -280,7 +280,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             hp_state, hp_set_nc, hp_set_eq, hp_set, hp_switch, hp_auto_asm, pc_name, audio_list, audio_set,
-            autostart_get, autostart_set, photo_frames, lang_get, lang_set
+            autostart_get, autostart_set, photo, lang_get, lang_set
         ])
         .build(tauri::generate_context!())
         .expect("failed to start")

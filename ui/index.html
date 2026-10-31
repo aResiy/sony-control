@@ -245,7 +245,7 @@
   .hint { color: var(--dim); font-size: 12px; margin-top: 10px; }
   .hint.warn { color: var(--warn); }
 
-  select { background: var(--card2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; font: inherit; outline: none; cursor: pointer; }
+  select { max-width: 48%; text-overflow: ellipsis; background: var(--card2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; font: inherit; outline: none; cursor: pointer; }
   .danger { width: 100%; margin-top: 4px; border: 1px solid rgba(255,107,107,.35); background: rgba(255,107,107,.08); color: var(--bad);
             padding: 12px; border-radius: 14px; font: inherit; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: .15s; }
   .danger:hover { background: rgba(255,107,107,.16); }
@@ -406,6 +406,21 @@
       </div>
     </div>
 
+    <div class="card hp" id="listencard" hidden>
+      <h2 data-i18n="listen_title"></h2>
+      <div class="seg small" id="listen">
+        <div class="pill"></div>
+        <button data-l="0" data-i18n="lm_standard"></button><button data-l="1" data-i18n="lm_bgm"></button><button data-l="2" data-i18n="lm_cinema"></button>
+      </div>
+      <div class="hint" id="listendesc"></div>
+      <div class="sub" id="roombox" hidden>
+        <div class="seg small" id="room">
+          <div class="pill"></div>
+          <button data-r="0" data-i18n="room_small"></button><button data-r="1" data-i18n="room_mid"></button><button data-r="2" data-i18n="room_large"></button>
+        </div>
+      </div>
+    </div>
+
     <div class="card hp">
       <h2 data-i18n="eq"></h2>
       <div class="chips" id="presets"></div>
@@ -436,6 +451,18 @@
     <div class="card hp">
       <h2 data-i18n="smart"></h2>
       <div id="smart"></div>
+      <div class="row" id="ncbtnrow" hidden>
+        <div class="ic"><svg><use href="#i-nc"/></svg></div>
+        <div class="tx"><b data-i18n="nc_button"></b><small data-i18n="nc_button_sub"></small></div>
+        <select id="ncbtn">
+          <option value="1" data-i18n="fn_nc_asm_off"></option><option value="2" data-i18n="fn_nc_asm"></option>
+          <option value="3" data-i18n="fn_nc_off"></option><option value="4" data-i18n="fn_asm_off"></option>
+        </select>
+      </div>
+      <div class="sub" id="pvbox" hidden>
+        <div class="lbl"><span data-i18n="vg_volume"></span><span id="pvv">0</span></div>
+        <input type="range" id="pv" min="-2" max="2" step="1">
+      </div>
     </div>
     <div class="card hp">
       <h2 data-i18n="audio_conn"></h2>
@@ -610,7 +637,7 @@ function mode(s) { return !s.nc_on ? "off" : s.nc_mode === 1 ? "amb" : "nc"; }
 function renderHp(s) {
   hp = s;
   $("name").textContent = s.name || t("headphones");
-  $("status").textContent = statusText(s.status);
+  $("status").textContent = statusText(s.status) + (s.connected && s.spl ? ` · ${s.spl} dB` : "");
   $("dot").classList.toggle("on", s.connected);
   document.querySelectorAll(".hp").forEach(c => c.classList.toggle("off", !s.connected));
 
@@ -691,7 +718,23 @@ function renderHp(s) {
   if (s.dsee != null) au.append(toggleRow("i-spark", "DSEE Extreme", t("dsee_sub"), s.dsee, v => set("dsee", +v)));
   $("connbox").hidden = s.conn_mode == null;
   select($("conn"), "data-c", s.conn_mode);
+  // listening mode (background music / cinema)
+  $("listencard").hidden = s.bgm == null && s.cinema == null;
+  const lm = s.bgm?.[1] ? 1 : s.cinema ? 2 : 0;
+  select($("listen"), "data-l", lm);
+  $("listendesc").textContent = t(["lm_standard_d", "lm_bgm_d", "lm_cinema_d"][lm]);
+  $("roombox").hidden = lm !== 1;
+  select($("room"), "data-r", s.bgm?.[2] ?? 0);
+  $("ncbtnrow").hidden = s.nc_button == null;
+  if (s.nc_button != null) $("ncbtn").value = s.nc_button;
+  $("pvbox").hidden = s.prompt_volume == null;
+  if (s.prompt_volume != null && document.activeElement !== $("pv")) {
+    $("pv").value = s.prompt_volume; $("pvv").textContent = signed(s.prompt_volume); fill($("pv"));
+  }
   $("aorow").hidden = !s.auto_off;
+  // Wearing-sensor models (XM6) only accept "when taken off" (16) and "never" (17).
+  const wearOnly = s.auto_off && s.auto_off[1] >= 16;
+  $("autooff").querySelectorAll("option").forEach(o => o.hidden = wearOnly && +o.value < 16);
   if (s.auto_off) $("autooff").value = s.auto_off[1];
 }
 
@@ -725,6 +768,12 @@ document.querySelectorAll("#sens button").forEach(b => b.onclick = () => {
 });
 document.querySelectorAll("#conn button").forEach(b => b.onclick = () => { select($("conn"), "data-c", b.dataset.c); set("conn_mode", +b.dataset.c); });
 $("autooff").onchange = () => set("auto_off", +$("autooff").value);
+const signed = v => (v > 0 ? "+" : "") + v;
+document.querySelectorAll("#listen button").forEach(b => b.onclick = () => { select($("listen"), "data-l", b.dataset.l); set("listen", +b.dataset.l); });
+document.querySelectorAll("#room button").forEach(b => b.onclick = () => { select($("room"), "data-r", b.dataset.r); set("bgm_room", +b.dataset.r); });
+$("ncbtn").onchange = () => set("nc_button", +$("ncbtn").value);
+$("pv").oninput = () => { $("pvv").textContent = signed(+$("pv").value); fill($("pv")); };
+$("pv").onchange = () => set("prompt_volume", (+$("pv").value + 256) % 256); // signed byte
 // Two-step confirm inside the button (no browser dialog).
 let powerArmed = 0;
 $("poweroff").onclick = () => {
@@ -768,8 +817,15 @@ function load(k) { try { return localStorage.getItem(k); } catch { return null; 
 // Headphones photo, if the user has one in the app data folder (never shipped in the repo);
 // otherwise the drawn SVG model. One image, no frame swapping: levitation + 3D tilt + light sweep.
 async function applyPhoto() {
-  const frames = await invoke("photo_frames").catch(() => []);
-  const url = frames[1] || frames[0], model = document.querySelector(".model");
+  // Retried: right after the window opens the IPC can occasionally fail, which used to
+  // silently fall back to the drawn model.
+  // undefined = the call failed (retry); null = there is simply no photo.
+  let url;
+  for (let i = 0; i < 4 && url === undefined; i++) {
+    url = await invoke("photo").catch(() => undefined);
+    if (url === undefined && i < 3) await new Promise(r => setTimeout(r, 400 * (i + 1)));
+  }
+  const model = document.querySelector(".model");
   model.querySelector(".tilt")?.remove();
   model.classList.toggle("hero", !!url);
   $("hpsvg").style.display = url ? "none" : "";

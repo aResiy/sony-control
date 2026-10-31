@@ -12,6 +12,7 @@ const KEYS = [
   "power", "auto_off", "auto_off_sub", "ao_removed", "ao_5", "ao_15", "ao_30", "ao_60", "ao_180", "ao_never", "power_off", "power_off_confirm",
   "headphones", "nothing_playing", "prev", "next", "playpause",
   "st_searching", "st_connected", "st_disconnected", "st_no_bt", "st_no_sony", "st_connect_failed", "st_socket",
+  "listen_title", "lm_standard", "lm_bgm", "lm_cinema", "lm_standard_d", "lm_bgm_d", "lm_cinema_d", "room_small", "room_mid", "room_large", "nc_button", "nc_button_sub", "fn_nc_asm_off", "fn_nc_asm", "fn_nc_off", "fn_asm_off", "vg_volume",
 ];
 
 const LANGS = {
@@ -27,6 +28,7 @@ const LANGS = {
     "Power", "Auto power off", "When the headphones aren't in use", "When taken off", "5 min", "15 min", "30 min", "1 hour", "3 hours", "Never", "Turn off headphones", "Click again to turn off",
     "Headphones", "Nothing playing", "Previous", "Next", "Play / pause",
     "Looking for headphones…", "Connected", "Disconnected. Looking for headphones…", "No Bluetooth headphones connected", "No Sony headphones connected", "Couldn't connect to the headphones (code {code})", "Bluetooth error {code}",
+    "Listening mode", "Standard", "Background music", "Cinema", "Normal listening", "Music sounds like it's playing in the background", "Wide, surround-like sound for movies", "My room", "Living room", "Café", "NC/AMB button", "What the button switches between", "NC → Ambient → Off", "NC ↔ Ambient", "NC ↔ Off", "Ambient ↔ Off", "Voice prompts volume",
   ]],
   uk: ["Українська", [
     "Звук", "Пристрої", "Налаштування", "Профілі", "Зберегти поточне", "Скасувати", "Вибери профіль, у який зберегти поточні налаштування.", "Гра", "Музика", "Дзвінок",
@@ -40,6 +42,7 @@ const LANGS = {
     "Живлення", "Автовимкнення", "Коли навушники не використовуються", "Коли зняв", "5 хв", "15 хв", "30 хв", "1 год", "3 год", "Ніколи", "Вимкнути навушники", "Натисни ще раз, щоб вимкнути",
     "Навушники", "Нічого не грає", "Попередній", "Наступний", "Пауза / грати",
     "Пошук навушників…", "Підключено", "Відключено. Шукаю навушники…", "Навушники не підключені по Bluetooth", "Навушники Sony не підключені", "Не вдалося підключитися до навушників (код {code})", "Помилка Bluetooth {code}",
+    "Режим прослуховування", "Стандарт", "Фонова музика", "Кіно", "Звичайне прослуховування", "Музика ніби грає фоном у кімнаті", "Широкий об'ємний звук для фільмів", "Моя кімната", "Вітальня", "Кав'ярня", "Кнопка NC/AMB", "Що перемикає кнопка", "Шумодав → Ambient → Вимк", "Шумодав ↔ Ambient", "Шумодав ↔ Вимк", "Ambient ↔ Вимк", "Гучність голосових підказок",
   ]],
   es: ["Español", [
     "Sonido", "Dispositivos", "Ajustes", "Perfiles", "Guardar actual", "Cancelar", "Elige un perfil para guardar la configuración actual.", "Juego", "Música", "Llamada",
@@ -53,6 +56,7 @@ const LANGS = {
     "Energía", "Apagado automático", "Cuando no se usan los auriculares", "Al quitártelos", "5 min", "15 min", "30 min", "1 hora", "3 horas", "Nunca", "Apagar auriculares", "Haz clic otra vez para apagar",
     "Auriculares", "No se reproduce nada", "Anterior", "Siguiente", "Reproducir / pausa",
     "Buscando auriculares…", "Conectado", "Desconectado. Buscando auriculares…", "No hay auriculares Bluetooth conectados", "No hay auriculares Sony conectados", "No se pudo conectar a los auriculares (código {code})", "Error de Bluetooth {code}",
+    "Modo de escucha", "Estándar", "Música de fondo", "Cine", "Escucha normal", "La música suena como de fondo", "Sonido amplio y envolvente para películas", "Mi habitación", "Salón", "Cafetería", "Botón NC/AMB", "Qué alterna el botón", "NC → Ambiente → Off", "NC ↔ Ambiente", "NC ↔ Off", "Ambiente ↔ Off", "Volumen de los avisos de voz",
   ]],
   pt: ["Português", [
     "Som", "Dispositivos", "Configurações", "Perfis", "Salvar atual", "Cancelar", "Escolha um perfil para salvar as configurações atuais.", "Jogo", "Música", "Chamada",
@@ -66,6 +70,7 @@ const LANGS = {
     "Energia", "Desligamento automático", "Quando os fones não estão em uso", "Ao tirar", "5 min", "15 min", "30 min", "1 hora", "3 horas", "Nunca", "Desligar fones", "Clique de novo para desligar",
     "Fones de ouvido", "Nada tocando", "Anterior", "Próxima", "Tocar / pausar",
     "Procurando fones…", "Conectado", "Desconectado. Procurando fones…", "Nenhum fone Bluetooth conectado", "Nenhum fone Sony conectado", "Não foi possível conectar aos fones (código {code})", "Erro de Bluetooth {code}",
+    "Modo de audição", "Padrão", "Música de fundo", "Cinema", "Audição normal", "A música soa como se tocasse ao fundo", "Som amplo e envolvente para filmes", "Meu quarto", "Sala de estar", "Café", "Botão NC/AMB", "O que o botão alterna", "NC → Ambiente → Desl.", "NC ↔ Ambiente", "NC ↔ Desl.", "Ambiente ↔ Desl.", "Volume dos avisos de voz",
   ]],
   de: ["Deutsch", [
     "Klang", "Geräte", "Einstellungen", "Profile", "Aktuelle speichern", "Abbrechen", "Wähle ein Profil, in dem die aktuellen Einstellungen gespeichert werden.", "Spiel", "Musik", "Anruf",
@@ -79,6 +84,7 @@ const LANGS = {
     "Energie", "Automatisch ausschalten", "Wenn die Kopfhörer nicht benutzt werden", "Beim Abnehmen", "5 Min.", "15 Min.", "30 Min.", "1 Std.", "3 Std.", "Nie", "Kopfhörer ausschalten", "Zum Ausschalten erneut klicken",
     "Kopfhörer", "Keine Wiedergabe", "Zurück", "Weiter", "Wiedergabe / Pause",
     "Suche Kopfhörer…", "Verbunden", "Getrennt. Suche Kopfhörer…", "Keine Bluetooth-Kopfhörer verbunden", "Keine Sony-Kopfhörer verbunden", "Verbindung zu den Kopfhörern fehlgeschlagen (Code {code})", "Bluetooth-Fehler {code}",
+    "Hörmodus", "Standard", "Hintergrundmusik", "Kino", "Normales Hören", "Musik klingt wie im Hintergrund", "Breiter, raumfüllender Klang für Filme", "Mein Zimmer", "Wohnzimmer", "Café", "NC/AMB-Taste", "Was die Taste umschaltet", "NC → Umgebung → Aus", "NC ↔ Umgebung", "NC ↔ Aus", "Umgebung ↔ Aus", "Lautstärke der Sprachansagen",
   ]],
   fr: ["Français", [
     "Son", "Appareils", "Paramètres", "Profils", "Enregistrer l'actuel", "Annuler", "Choisis un profil où enregistrer les réglages actuels.", "Jeu", "Musique", "Appel",
@@ -92,6 +98,7 @@ const LANGS = {
     "Alimentation", "Arrêt automatique", "Quand le casque n'est pas utilisé", "Au retrait", "5 min", "15 min", "30 min", "1 h", "3 h", "Jamais", "Éteindre le casque", "Clique à nouveau pour éteindre",
     "Casque", "Rien en lecture", "Précédent", "Suivant", "Lecture / pause",
     "Recherche du casque…", "Connecté", "Déconnecté. Recherche du casque…", "Aucun casque Bluetooth connecté", "Aucun casque Sony connecté", "Impossible de se connecter au casque (code {code})", "Erreur Bluetooth {code}",
+    "Mode d'écoute", "Standard", "Musique d'ambiance", "Cinéma", "Écoute normale", "La musique semble jouer en fond", "Son large et enveloppant pour les films", "Ma chambre", "Salon", "Café", "Bouton NC/AMB", "Ce que le bouton fait alterner", "RB → Ambiant → Désact.", "RB ↔ Ambiant", "RB ↔ Désact.", "Ambiant ↔ Désact.", "Volume des annonces vocales",
   ]],
   it: ["Italiano", [
     "Suono", "Dispositivi", "Impostazioni", "Profili", "Salva attuale", "Annulla", "Scegli un profilo in cui salvare le impostazioni attuali.", "Gioco", "Musica", "Chiamata",
@@ -105,6 +112,7 @@ const LANGS = {
     "Alimentazione", "Spegnimento automatico", "Quando le cuffie non sono in uso", "Quando le togli", "5 min", "15 min", "30 min", "1 ora", "3 ore", "Mai", "Spegni le cuffie", "Fai di nuovo clic per spegnere",
     "Cuffie", "Niente in riproduzione", "Precedente", "Successivo", "Riproduci / pausa",
     "Ricerca cuffie…", "Collegato", "Scollegato. Ricerca cuffie…", "Nessuna cuffia Bluetooth collegata", "Nessuna cuffia Sony collegata", "Impossibile collegarsi alle cuffie (codice {code})", "Errore Bluetooth {code}",
+    "Modalità di ascolto", "Standard", "Musica di sottofondo", "Cinema", "Ascolto normale", "La musica sembra suonare in sottofondo", "Suono ampio e avvolgente per i film", "La mia stanza", "Soggiorno", "Caffè", "Tasto NC/AMB", "Cosa alterna il tasto", "NC → Ambiente → Off", "NC ↔ Ambiente", "NC ↔ Off", "Ambiente ↔ Off", "Volume degli avvisi vocali",
   ]],
   pl: ["Polski", [
     "Dźwięk", "Urządzenia", "Ustawienia", "Profile", "Zapisz bieżące", "Anuluj", "Wybierz profil, do którego zapisać bieżące ustawienia.", "Gra", "Muzyka", "Rozmowa",
@@ -118,6 +126,7 @@ const LANGS = {
     "Zasilanie", "Automatyczne wyłączanie", "Gdy słuchawki nie są używane", "Po zdjęciu", "5 min", "15 min", "30 min", "1 godz.", "3 godz.", "Nigdy", "Wyłącz słuchawki", "Kliknij ponownie, aby wyłączyć",
     "Słuchawki", "Nic nie gra", "Poprzedni", "Następny", "Odtwarzaj / pauza",
     "Szukam słuchawek…", "Połączono", "Rozłączono. Szukam słuchawek…", "Brak połączonych słuchawek Bluetooth", "Brak połączonych słuchawek Sony", "Nie udało się połączyć ze słuchawkami (kod {code})", "Błąd Bluetooth {code}",
+    "Tryb słuchania", "Standard", "Muzyka w tle", "Kino", "Zwykłe słuchanie", "Muzyka brzmi jak grająca w tle", "Szeroki, przestrzenny dźwięk do filmów", "Mój pokój", "Salon", "Kawiarnia", "Przycisk NC/AMB", "Co przełącza przycisk", "NC → Otoczenie → Wył.", "NC ↔ Otoczenie", "NC ↔ Wył.", "Otoczenie ↔ Wył.", "Głośność komunikatów głosowych",
   ]],
   ru: ["Русский", [
     "Звук", "Устройства", "Настройки", "Профили", "Сохранить текущее", "Отмена", "Выбери профиль, в который сохранить текущие настройки.", "Игра", "Музыка", "Звонок",
@@ -131,6 +140,7 @@ const LANGS = {
     "Питание", "Автовыключение", "Когда наушники не используются", "При снятии", "5 мин", "15 мин", "30 мин", "1 ч", "3 ч", "Никогда", "Выключить наушники", "Нажми ещё раз, чтобы выключить",
     "Наушники", "Ничего не играет", "Предыдущий", "Следующий", "Пауза / играть",
     "Поиск наушников…", "Подключено", "Отключено. Ищу наушники…", "Bluetooth-наушники не подключены", "Наушники Sony не подключены", "Не удалось подключиться к наушникам (код {code})", "Ошибка Bluetooth {code}",
+    "Режим прослушивания", "Стандарт", "Фоновая музыка", "Кино", "Обычное прослушивание", "Музыка будто играет фоном в комнате", "Широкий объёмный звук для фильмов", "Моя комната", "Гостиная", "Кафе", "Кнопка NC/AMB", "Что переключает кнопка", "Шумодав → Окружение → Выкл", "Шумодав ↔ Окружение", "Шумодав ↔ Выкл", "Окружение ↔ Выкл", "Громкость голосовых подсказок",
   ]],
   zh: ["简体中文", [
     "声音", "设备", "设置", "情景模式", "保存当前", "取消", "选择一个情景模式来保存当前设置。", "游戏", "音乐", "通话",
@@ -144,6 +154,7 @@ const LANGS = {
     "电源", "自动关机", "耳机闲置时", "摘下时", "5 分钟", "15 分钟", "30 分钟", "1 小时", "3 小时", "从不", "关闭耳机", "再点一次以关闭",
     "耳机", "未在播放", "上一首", "下一首", "播放 / 暂停",
     "正在查找耳机…", "已连接", "已断开，正在查找耳机…", "未连接蓝牙耳机", "未连接索尼耳机", "无法连接耳机（错误码 {code}）", "蓝牙错误 {code}",
+    "聆听模式", "标准", "背景音乐", "影院", "正常聆听", "音乐听起来像在背景中播放", "宽广环绕的电影音效", "我的房间", "客厅", "咖啡馆", "NC/AMB 按钮", "按钮切换的模式", "降噪 → 环境声 → 关闭", "降噪 ↔ 环境声", "降噪 ↔ 关闭", "环境声 ↔ 关闭", "语音提示音量",
   ]],
   ja: ["日本語", [
     "サウンド", "デバイス", "設定", "プロファイル", "現在の設定を保存", "キャンセル", "現在の設定を保存するプロファイルを選んでください。", "ゲーム", "音楽", "通話",
@@ -157,6 +168,7 @@ const LANGS = {
     "電源", "自動電源オフ", "ヘッドホンを使っていないとき", "外したとき", "5 分", "15 分", "30 分", "1 時間", "3 時間", "しない", "ヘッドホンの電源を切る", "もう一度クリックで電源オフ",
     "ヘッドホン", "再生していません", "前へ", "次へ", "再生 / 一時停止",
     "ヘッドホンを検索中…", "接続済み", "切断されました。ヘッドホンを検索中…", "Bluetooth ヘッドホンが接続されていません", "ソニーのヘッドホンが接続されていません", "ヘッドホンに接続できませんでした（コード {code}）", "Bluetooth エラー {code}",
+    "リスニングモード", "標準", "BGM", "シネマ", "通常のリスニング", "音楽が背景で流れているように聞こえる", "映画向けの広がりのあるサラウンド", "自分の部屋", "リビング", "カフェ", "NC/AMB ボタン", "ボタンで切り替える内容", "NC → 外音 → オフ", "NC ↔ 外音", "NC ↔ オフ", "外音 ↔ オフ", "音声ガイダンスの音量",
   ]],
   ko: ["한국어", [
     "사운드", "기기", "설정", "프로필", "현재 설정 저장", "취소", "현재 설정을 저장할 프로필을 선택하세요.", "게임", "음악", "통화",
@@ -170,6 +182,7 @@ const LANGS = {
     "전원", "자동 전원 끄기", "헤드폰을 사용하지 않을 때", "벗었을 때", "5분", "15분", "30분", "1시간", "3시간", "안 함", "헤드폰 끄기", "끄려면 한 번 더 클릭",
     "헤드폰", "재생 중인 항목 없음", "이전", "다음", "재생 / 일시정지",
     "헤드폰 찾는 중…", "연결됨", "연결 끊김. 헤드폰 찾는 중…", "연결된 블루투스 헤드폰 없음", "연결된 소니 헤드폰 없음", "헤드폰에 연결할 수 없습니다 (코드 {code})", "블루투스 오류 {code}",
+    "청취 모드", "표준", "배경 음악", "시네마", "일반 청취", "음악이 배경에서 흐르는 것처럼 들려요", "영화를 위한 넓은 서라운드 사운드", "내 방", "거실", "카페", "NC/AMB 버튼", "버튼으로 전환할 항목", "NC → 주변 소리 → 끄기", "NC ↔ 주변 소리", "NC ↔ 끄기", "주변 소리 ↔ 끄기", "음성 안내 볼륨",
   ]],
 };
 

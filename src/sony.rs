@@ -97,6 +97,15 @@ pub struct HpState {
     pub auto_off: Option<(u8, u8)>,
     pub general: Vec<GeneralSetting>,
     pub peers: Vec<Peer>,
+    /// Background music mode: (variant 0x03|0x09, on, room 0 small / 1 middle / 2 large)
+    pub bgm: Option<(u8, bool, u8)>,
+    pub cinema: Option<bool>,
+    /// What the NC/AMB button cycles through (Function enum: 0x01..0x04)
+    pub nc_button: Option<u8>,
+    /// Voice guidance volume (signed small steps)
+    pub prompt_volume: Option<i8>,
+    /// Sound pressure at the ears, dB
+    pub spl: Option<u8>,
 }
 
 #[derive(Clone, Serialize)]
@@ -192,9 +201,14 @@ impl Sony {
                     if let Err(e) = me.connect() {
                         me.update(|s| s.status = e);
                     }
-                } else if tick % 12 == 0 {
-                    me.send(&[0x22, 0x00]);
-                    me.send(&[0x22, 0x08]);
+                } else {
+                    if tick % 12 == 0 {
+                        me.send(&[0x22, 0x00]);
+                        me.send(&[0x22, 0x08]);
+                    }
+                    if tick % 3 == 0 {
+                        me.sound_pressure();
+                    }
                 }
                 tick = tick.wrapping_add(1);
                 thread::sleep(Duration::from_secs(5));
@@ -236,6 +250,10 @@ impl Sony {
             &[0xE6, 0x00],     // connection mode
             &[0x26, 0x05],     // auto power off (wearing detection)
             &[0x26, 0x04],     // auto power off
+            &[0xE6, 0x09],     // background music mode (with error code)
+            &[0xE6, 0x03],     // background music mode
+            &[0xE6, 0x04],     // cinema
+            &[0x66, 0x30],     // NC/AMB button function
         ] {
             self.send(q);
         }
@@ -245,6 +263,13 @@ impl Sony {
         }
         self.send_t(T_MDR2, &[0x36, 0x02]); // paired devices (multipoint)
         self.send_t(T_MDR2, &[0x36, 0x00]);
+        self.send_t(T_MDR2, &[0x46, 0x20]); // voice guidance volume
+        self.sound_pressure();
+    }
+
+    fn sound_pressure(&self) {
+        self.send_t(T_MDR2, &[0x5A, 0x00]);
+        self.send_t(T_MDR2, &[0x5A, 0x02]);
     }
 
     fn raw_send(&self, sock: SOCKET, buf: &[u8]) -> bool {
@@ -379,6 +404,11 @@ impl Sony {
             // AUDIO_RET/NTFY_PARAM
             [0xE7 | 0xE9, 0x01, v, ..] => self.update(|s| s.dsee = Some(*v == 1)),
             [0xE7 | 0xE9, 0x00, v, ..] => self.update(|s| s.conn_mode = Some(*v)),
+            // Listening mode: background music [type, on(0 = ON), room], cinema [type, on]
+            [0xE7 | 0xE9, ty @ (0x03 | 0x09), on, room, ..] => self.update(|s| s.bgm = Some((*ty, *on == 0, *room))),
+            [0xE7 | 0xE9, 0x04, on, ..] => self.update(|s| s.cinema = Some(*on == 0)),
+            // NC/AMB button function
+            [0x67 | 0x69, 0x30, f, ..] => self.update(|s| s.nc_button = Some(*f)),
             // POWER_RET/NTFY_PARAM auto power off
             [0x27 | 0x29, ty @ (0x04 | 0x05), cur, ..] => self.update(|s| s.auto_off = Some((*ty, *cur))),
             // GENERAL_SETTING_RET_CAPABILITY: [id, type(0 = bool), format, name]
@@ -412,6 +442,11 @@ impl Sony {
                     self.update(|s| s.peers = peers)
                 }
             }
+            // VOICE_GUIDANCE_RET_PARAM volume
+            [0x47, 0x20, v, ..] => self.update(|s| s.prompt_volume = Some(*v as i8)),
+            // SAFE_LISTENING_RET_EXTENDED_PARAM: [type, dB level, error cause]
+            // 255 = not measured (e.g. paused): keep the last real value.
+            [0x5B, 0x00 | 0x02, level, ..] if (1..=150).contains(level) => self.update(|s| s.spl = Some(*level)),
             // Source switched: [type, result, mac(17)]
             [0x3D, 0x01, _, mac @ ..] if mac.len() >= 17 => {
                 let mac = String::from_utf8_lossy(&mac[..17]).into_owned();
@@ -437,6 +472,16 @@ impl Sony {
                 self.send(&[0x28, ty, v, 0x00])
             }
             "power_off" => self.send(&[0x24, 0x03, 0x01]),
+            // 0 standard, 1 background music, 2 cinema: switch the other mode off first.
+            "listen" => self.set_listening(v),
+            // room for background music: 0 small, 1 middle, 2 large
+            "bgm_room" => {
+                let ty = self.state().bgm.map_or(0x09, |b| b.0);
+                self.send(&[0xE8, ty, 0x00, v])
+            }
+            "nc_button" => self.send(&[0x68, 0x30, v]),
+            // v is the signed volume as a byte (two's complement)
+            "prompt_volume" => self.send_t(T_MDR2, &[0x48, 0x20, v, 0x00]),
             id if id.starts_with("gs") => {
                 let id = id[2..].parse::<u8>().unwrap_or(0);
                 self.send(&[0xD8, id, 0x00, onoff])
@@ -451,10 +496,30 @@ impl Sony {
             "dsee" => self.send(&[0xE6, 0x01]),
             "conn_mode" => self.send(&[0xE6, 0x00]),
             "auto_off" => self.send(&[0x26, self.state().auto_off.map_or(0x04, |a| a.0)]),
+            "listen" | "bgm_room" => {
+                let ty = self.state().bgm.map_or(0x09, |b| b.0);
+                self.send(&[0xE6, ty]) && self.send(&[0xE6, 0x04]) && self.send(&[0x52, 0x00])
+            }
+            "nc_button" => self.send(&[0x66, 0x30]),
+            "prompt_volume" => self.send_t(T_MDR2, &[0x46, 0x20]),
             id if id.starts_with("gs") => self.send(&[0xD6, id[2..].parse::<u8>().unwrap_or(0)]),
             _ => true,
         };
         ok
+    }
+
+    /// Listening mode 0 standard / 1 background music / 2 cinema. The modes exclude each
+    /// other, so the one being left is switched off before the new one goes on.
+    fn set_listening(&self, mode: u8) -> bool {
+        let s = self.state();
+        let (bgm_ty, room) = s.bgm.map_or((0x09, 0), |b| (b.0, b.2));
+        let bgm = |on: bool| self.send(&[0xE8, bgm_ty, if on { 0x00 } else { 0x01 }, room]);
+        let cinema = |on: bool| self.send(&[0xE8, 0x04, if on { 0x00 } else { 0x01 }]);
+        match mode {
+            1 => cinema(false) && bgm(true),
+            2 => bgm(false) && cinema(true),
+            _ => bgm(false) && cinema(false),
+        }
     }
 
     /// Multipoint: make `mac` (as reported in `peers`) the playing device.
@@ -596,6 +661,47 @@ mod tests {
         thread::sleep(Duration::from_millis(500));
         assert_eq!(hp.state().volume, Some(vol));
         eprintln!("peers: {:?}", hp.state().peers.iter().map(|p| &p.name).collect::<Vec<_>>());
+    }
+
+    /// Sets auto power off to SONY_AUTO_OFF (default 17 = never; XM6 only accepts 16 "when taken
+    /// off" and 17 "never") and reads it back:
+    /// `cargo test -- --ignored live_auto_off`
+    #[test]
+    #[ignore]
+    fn live_auto_off() {
+        let v: u8 = std::env::var("SONY_AUTO_OFF").ok().and_then(|s| s.parse().ok()).unwrap_or(17);
+        let hp = Sony::new(|_| {});
+        hp.connect().expect("connect");
+        thread::sleep(Duration::from_secs(2));
+        eprintln!("before: {:?}", hp.state().auto_off);
+        assert!(hp.set("auto_off", v));
+        thread::sleep(Duration::from_millis(600));
+        eprintln!("after: {:?}", hp.state().auto_off);
+        assert_eq!(hp.state().auto_off.map(|a| a.1), Some(v));
+    }
+
+    /// `cargo test -- --ignored live_listening_modes` with the headphones connected.
+    #[test]
+    #[ignore]
+    fn live_listening_modes() {
+        let hp = Sony::new(|_| {});
+        hp.connect().expect("connect");
+        thread::sleep(Duration::from_secs(2));
+        let s0 = hp.state();
+        let mode = |s: &HpState| (s.bgm.map(|b| b.1), s.cinema);
+        let start = mode(&s0);
+        for (m, want) in [(2, (Some(false), Some(true))), (1, (Some(true), Some(false))), (0, (Some(false), Some(false)))] {
+            assert!(hp.set("listen", m));
+            thread::sleep(Duration::from_millis(600));
+            assert_eq!(mode(&hp.state()), want, "listening mode {m}");
+        }
+        let restore = match start { (Some(true), _) => 1, (_, Some(true)) => 2, _ => 0 };
+        assert!(hp.set("listen", restore));
+        let pv = s0.prompt_volume.expect("prompt volume");
+        assert!(hp.set("prompt_volume", (pv + 1) as u8));
+        thread::sleep(Duration::from_millis(500));
+        assert_eq!(hp.state().prompt_volume, Some(pv + 1));
+        assert!(hp.set("prompt_volume", pv as u8));
     }
 
     #[test]

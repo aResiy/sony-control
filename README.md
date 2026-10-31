@@ -31,11 +31,13 @@
 |---|---|
 | 🎧 **Noise control** | Noise Cancelling / Ambient / Off, ambient level, voice focus, adaptive ambient with sensitivity |
 | 🎚️ **Equalizer** | Heavy, Clear, Hard, Soft presets and a 10-band custom EQ |
+| 🎬 **Listening mode** | Standard, Background music (my room / living room / café) and Cinema |
 | ▶️ **Player** | Track title, play / pause / next / previous, headphone volume |
 | 📱 **Multipoint** | See which devices the headphones are connected to and move the audio between phone and PC in one click |
 | 🔊 **PC audio** | Switch the Windows sound output and microphone; warns when the Bluetooth headset mic would ruin sound quality |
 | 🎮 **Profiles** | Game / Music / Call — each remembers noise mode, EQ, output and mic |
-| ⚙️ **Headphone settings** | Speak-to-Chat, pause when taken off, DSEE Extreme, LDAC vs. stable connection, touch panel, multipoint, sidetone, auto power off, power off |
+| ⚙️ **Headphone settings** | Speak-to-Chat, pause when taken off, DSEE Extreme, LDAC vs. stable connection, touch panel, multipoint, sidetone, NC/AMB button, voice prompts volume, auto power off, power off |
+| 📈 **Sound level** | Live listening level in dB next to the connection status |
 | 🔔 **Tray** | Battery and quick noise-mode switching without opening the window; low battery notifications at 20% and 10% |
 | 🚀 **Light** | Starts with Windows straight into the tray (~6 MB RAM); the window is unloaded when closed |
 | 🎨 **Themes** | Four color themes and an animated 3D scene |
