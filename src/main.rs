@@ -114,8 +114,12 @@ async fn photo(app: AppHandle) -> Option<String> {
         .flatten()
         .flat_map(|d| ["headphones-1.png", "headphones-0.png"].map(|f| d.join(f)))
         .find_map(|p| std::fs::read(p).ok())
+        .or_else(|| (!EMBEDDED_PHOTO.is_empty()).then(|| EMBEDDED_PHOTO.to_vec()))
         .map(|b| format!("data:image/png;base64,{}", base64(&b)))
 }
+
+/// Picture baked in at build time via SONY_PHOTO (empty in public builds), see build.rs.
+const EMBEDDED_PHOTO: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/embedded_photo.png"));
 
 fn base64(b: &[u8]) -> String {
     const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

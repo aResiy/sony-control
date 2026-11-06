@@ -78,6 +78,8 @@ cargo build --release
 
 The app is `target/release/sony-control.exe`. Run the tests with `cargo test`.
 
+To bake your own headphones picture into a personal build, set `SONY_PHOTO` to a transparent PNG before building (PowerShell: `$env:SONY_PHOTO="C:\path\headphones.png"; cargo build --release`).
+
 ## Credits
 
 The headphone protocol (MDR) is ported to Rust from [mos9527/SonyHeadphonesClient](https://github.com/mos9527/SonyHeadphonesClient) (MIT),
